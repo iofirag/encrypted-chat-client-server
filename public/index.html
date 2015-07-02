@@ -6,7 +6,15 @@
   </head>
   <body>
     <header>
-      <input id="nickname" placeholder="nickname"/><button id="connect">Connect</button>
+      <input id="nickname" placeholder="nickname"/>
+      <button id="connect">Connect</button>
+      <lable>Encryption Type:
+        <select id="encryptionType">
+          <option value="">no encryption</option>
+          <option value="RC4">RC4</option>
+          <option value="3DES">3DES</option>
+        </select>
+      </lable>
     </header>
 
     <ul id="onlineUsers"></ul>

@@ -33,14 +33,14 @@ io.on('connection', function(socket){
 		socket.broadcast.emit('user end typing', '');
 	});
 
-	socket.on('chat message', function(msgObj){
-		console.log('message: [' + msgObj.nickname + '] - '+msgObj.message);
+	socket.on('chat message', function(msg){
+		console.log('message: [' + onlineUsersMap[socket.id].nickname + '] - '+msg);
 		//io.emit('chat message', msg);
-		socket.broadcast.emit('chat message', msgObj);
+		socket.broadcast.emit('chat message', {nickname: onlineUsersMap[socket.id].nickname,  message: msg});
 	});
 
 	socket.on('disconnect', function(){
-		console.log('user disconnected');
+		console.log('user disconnected: '+onlineUsersMap[socket.id].nickname);
 		socket.broadcast.emit('user disconnected', onlineUsersMap[socket.id].nickname);
 		delete onlineUsersMap[socket.id];
 		io.emit('online users', onlineUsersMap);

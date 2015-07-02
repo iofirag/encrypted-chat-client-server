@@ -10,7 +10,6 @@ $('#nickname').keypress(function( event ) {
     }
   }
 });
-
 $('#connect').click(function(){
   if (typeof socket!=='undefined' && socket!=null){ 
     if (socket.connected){
@@ -44,12 +43,10 @@ $('#connect').click(function(){
 function connectAndChangeView(connectType) {
 
   // Handle connect button & input nickname
-  var nickname = $('#nickname').val();
-
   var user = {
-    nickname : nickname,
-    encryption : 'rsa'
-  }
+    nickname : $('#nickname').val(),
+    encryption : $('#encryptionType').val()
+  };
 
   // Change view
   $('#nickname').attr('disabled','disabled');
@@ -82,9 +79,11 @@ function connectAndChangeView(connectType) {
   // Send chat message
   $('form').submit(function(){
     var myMsg = $('#m').val();
-    $('#messages').append($('<li>').text('me: '+myMsg));
-    socket.emit('chat message', {nickname: user.nickname, message: myMsg});
-    $('#m').val('');
+    if (!!myMsg){
+      $('#messages').append($('<li>').text('me: '+myMsg));
+      socket.emit('chat message', myMsg);
+      $('#m').val('');
+    }
     return false;
   });
   
