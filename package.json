@@ -1,0 +1,16 @@
+{
+  "name": "chatWebSocket",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "ofir aghai",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.10.2",
+    "socket.io": "^1.3.5",
+    "path": "^0.11.14"
+  }
+}
