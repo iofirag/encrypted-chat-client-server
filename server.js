@@ -34,7 +34,7 @@ io.on('connection', function(socket){
 	});
 
 	socket.on('chat message', function(msgObj){
-		console.log('message: ' + msgObj);
+		console.log('message: [' + msgObj.nickname + '] - '+msgObj.message);
 		//io.emit('chat message', msg);
 		socket.broadcast.emit('chat message', msgObj);
 	});

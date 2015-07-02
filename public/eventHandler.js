@@ -1,5 +1,16 @@
 var socket;
 
+// Auto click on button wile pressing Enter
+$('#nickname').keypress(function( event ) {
+  if ( event.which == 13 ) {
+    event.preventDefault();
+    var nickname = $('#nickname').val();
+    if (!!nickname) {
+      $('#connect').click();
+    }
+  }
+});
+
 $('#connect').click(function(){
   if (typeof socket!=='undefined' && socket!=null){ 
     if (socket.connected){
