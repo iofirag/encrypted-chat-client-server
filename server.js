@@ -41,7 +41,7 @@ io.on('connection', function(socket){
 
 	socket.on('disconnect', function(){
 		console.log('user disconnected');
-		socket.broadcast.emit('user disconnected', onlineUsersMap[socket.id]);
+		socket.broadcast.emit('user disconnected', onlineUsersMap[socket.id].nickname);
 		delete onlineUsersMap[socket.id];
 		io.emit('online users', onlineUsersMap);
 	});
