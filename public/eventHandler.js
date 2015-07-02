@@ -35,6 +35,11 @@ function connectAndChangeView(connectType) {
   // Handle connect button & input nickname
   var nickname = $('#nickname').val();
 
+  var user = {
+    nickname : nickname,
+    encryption : 'rsa'
+  }
+
   // Change view
   $('#nickname').attr('disabled','disabled');
   $('#nickname').css('color','gray');
@@ -43,10 +48,10 @@ function connectAndChangeView(connectType) {
   
   switch(connectType){
     case 'connect': socket = io();
-        socket.emit('user connected', nickname);
+        socket.emit('user connected', user);
       break;
     case 'reconnect': socket.open();
-        socket.emit('user connected', nickname);
+        socket.emit('user connected', user);
       break;
   }
 
@@ -55,19 +60,19 @@ function connectAndChangeView(connectType) {
    */
   // Send typing...
   $('#m').on('input', function(e){
-    console.log('user is typing');
-    socket.emit('user typing', nickname);
+    //console.log('user is typing');
+    socket.emit('user typing', user.nickname);
   });
   // Send end typing
   $('#m').donetyping(function(){
-    console.log('Event last fired @ ' + (new Date().toUTCString()));
-    socket.emit('user end typing', nickname);
+    //console.log('Event last fired @ ' + (new Date().toUTCString()));
+    socket.emit('user end typing', user.nickname);
   });
   // Send chat message
   $('form').submit(function(){
     var myMsg = $('#m').val();
     $('#messages').append($('<li>').text('me: '+myMsg));
-    socket.emit('chat message', {nickname: nickname, message: myMsg});
+    socket.emit('chat message', {nickname: user.nickname, message: myMsg});
     $('#m').val('');
     return false;
   });
@@ -83,8 +88,8 @@ function connectAndChangeView(connectType) {
   // online users
   socket.on('online users', function(onlineUsersMap){
     $('#onlineUsers').empty();
-    $.each(onlineUsersMap, function(i,userName){
-      $('#onlineUsers').append($('<li class="userId">').text(userName));
+    $.each(onlineUsersMap, function(i,user){
+      $('#onlineUsers').append($('<li class="userId">').text(user.nickname));
     });
   });
   // typing

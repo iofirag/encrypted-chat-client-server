@@ -16,10 +16,10 @@ app.get('/', function(req, res){
 io.on('connection', function(socket){
 	//console.log('a user connected');
 
-	socket.on('user connected', function(nickname){
-		console.log('user connected: '+nickname);
-		onlineUsersMap[socket.id] = nickname;
-		socket.broadcast.emit('user connected', nickname);
+	socket.on('user connected', function(user){
+		console.log('user connected: '+user.nickname);
+		onlineUsersMap[socket.id] = user;
+		socket.broadcast.emit('user connected', user.nickname);
 		io.emit('online users', onlineUsersMap);
 	});
 
