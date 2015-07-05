@@ -40,8 +40,13 @@ io.on('connection', function(socket){
 	});
 
 	socket.on('disconnect', function(){
-		console.log('user disconnected: '+onlineUsersMap[socket.id].nickname);
-		socket.broadcast.emit('user disconnected', onlineUsersMap[socket.id].nickname);
+		var nickname = '';
+		var userObj = onlineUsersMap[socket.id];
+		if (!!userObj){
+			nickname = onlineUsersMap[socket.id].nickname;
+		}
+		console.log('user disconnected: '+nickname);
+		socket.broadcast.emit('user disconnected', nickname);
 		delete onlineUsersMap[socket.id];
 		io.emit('online users', onlineUsersMap);
 	});

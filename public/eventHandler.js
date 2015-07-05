@@ -1,4 +1,77 @@
 var socket;
+var cryptAlg;
+
+
+
+// Encryption Handler
+$('#encryptionType').change(function() {
+  console.log(this.value);
+
+  // first empty fields
+  var encryptionElements = $('#encryptionElements');
+  encryptionElements.empty();
+
+  // build fields
+  switch ( this.value.toLowerCase() ){
+    case '':
+      cryptAlg = null;
+      break
+    case 'rc4':  
+      var vectorLength = $('<lable class="encryptionLable">Vector Length:</lable> <input id="vectorLength" value="4">');
+      var key = $('<lable class="encryptionLable">Key (256 Byte):</lable> <input id="key">'+
+                      '<input class="keyBt" type="button" value="Gen" id="rc4GenBtn">');
+      var firstBytesDrop = $('<lable class="encryptionLable">First byte to drop:</lable> <input id="firstBytesDrop" value="100">');
+      //var save = $('<br><input type="button" value="Save" onclick="cryptAlg.Crypt()">');
+      encryptionElements.append(vectorLength);
+      encryptionElements.append(key);
+      encryptionElements.append(firstBytesDrop);
+      //encryptionElements.append(save);
+      
+      cryptAlg = new RC4();
+      $('#rc4GenBtn').click(function(){
+          $('#key').val(GenerateKey(10));
+      });
+
+      // execute init crypt on input event for every one of the fields
+      // $('#vectorLength').on('input', RC4Init );
+      // $('#key').on('input', RC4Init );
+      // $('#firstBytesDrop').on('input', RC4Init );
+      // $('#firstBytesDrop').on('input', RC4Init );
+      //genCrypt = RC4GenOutput;
+          
+      break;
+    case '3des':
+      var key1 = $('<lable class="encryptionLable">Key 1 (7 Byte):</lable> <input id="key1" class="encryptionElement"> \
+                      <input class="keyBt" type="button" id="3desBtn1" value="Generate key">');
+      var key2 = $('<lable class="encryptionLable">Key 2  (7 Byte):</lable> <input id="key2" class="encryptionElement"> \
+                      <input class="keyBt" type="button" id="3desBtn2" value="Generate key">');
+      var key3 = $('<lable class="encryptionLable">Key 3 (7 Byte):</lable> <input id="key3" class="encryptionElement"> \
+                      <input class="keyBt" type="button" id="3desBtn3" value="Generate key">');
+      var opType = $('<lable class="encryptionLable">Oparation Type:</lable> <select id="opType" class="encryptionElement"> \
+                      <option value="CBC">CBC</option> \
+                      <option value="CFB">CFB</option> \
+                      <option value="CTR">CTR</option> \
+                    </select>');
+      var save = $('<br><input type="button" value="Save" onclick="3DESInit()">');
+      encryptionElements.append(key1);
+      encryptionElements.append(key2);
+      encryptionElements.append(key3);
+      encryptionElements.append(opType);
+      encryptionElements.append(save);
+      $('#3desBtn1').click(function(){
+          $('#key1').val(GenerateKey(7));
+      });
+      $('#3desBtn2').click(function(){
+          $('#key2').val(GenerateKey(7));
+      });
+      $('#3desBtn3').click(function(){
+          $('#key3').val(GenerateKey(7));
+      });
+      break;
+  }
+});
+
+
 
 // Auto click on button wile pressing Enter
 $('#nickname').keypress(function( event ) {
@@ -30,7 +103,7 @@ $('#connect').click(function(){
       $('#connect').text('Connect');
 
     }else if (!socket.connected){
-      // Recnnect
+      // Reconnect
       connectAndChangeView('reconnect');
     }  
   }else{
@@ -45,7 +118,7 @@ function connectAndChangeView(connectType) {
   // Handle connect button & input nickname
   var user = {
     nickname : $('#nickname').val(),
-    encryption : $('#encryptionType').val()
+    encryptionType : $('#encryptionType').val()
   };
 
   // Change view
@@ -77,16 +150,25 @@ function connectAndChangeView(connectType) {
     socket.emit('user end typing', user.nickname);
   });
   // Send chat message
-  $('form').submit(function(){
+  $('#m').keypress(function( event ) {
+    if ( event.which == 13 ) {
+      event.preventDefault();
+      sendMsg();
+    }
+  });
+  function sendMsg() {
     var myMsg = $('#m').val();
     if (!!myMsg){
       $('#messages').append($('<li>').text('me: '+myMsg));
-      socket.emit('chat message', myMsg);
+
+      // If user using cryptographic alg.
+      if (!!cryptAlg) socket.emit('chat message', cryptAlg.Crypt(myMsg));
+      else socket.emit('chat message', myMsg);
+      
       $('#m').val('');
     }
-    return false;
-  });
-  
+  };
+
   
   /**
    * Received Events
@@ -113,7 +195,13 @@ function connectAndChangeView(connectType) {
   // chat message 
   socket.on('chat message', function(msgObj){
     $('#typing').empty();
-    $('#messages').append($('<li>').text(msgObj.nickname+': '+msgObj.message));
+
+    // If user using cryptographic alg.
+    var decryptMsg;
+    if (!!cryptAlg) decryptMsg = cryptAlg.Decrypt(msgObj.message);
+    else decryptMsg = msgObj.message;
+
+    $('#messages').append($('<li>').text(msgObj.nickname+': '+decryptMsg));
   });
   // user disconnected 
   socket.on('user disconnected', function(userId){
@@ -123,7 +211,6 @@ function connectAndChangeView(connectType) {
   $('#connect').text('Disconnect');
   $('#connect').removeAttr('disabled');
 }
-
 
 
 

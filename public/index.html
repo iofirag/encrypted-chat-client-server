@@ -6,15 +6,21 @@
   </head>
   <body>
     <header>
+
       <input id="nickname" placeholder="nickname"/>
       <button id="connect">Connect</button>
-      <lable>Encryption Type:
-        <select id="encryptionType">
-          <option value="">no encryption</option>
-          <option value="RC4">RC4</option>
-          <option value="3DES">3DES</option>
-        </select>
-      </lable>
+      
+      <fieldset id="encryption">
+        <legend>Encryption</legend>
+        <lable id="encryptionLable">Encryption type:
+          <select id="encryptionType">
+            <option value="">none</option>
+            <option value="RC4">RC4</option>
+            <option value="3DES">3DES</option>
+          </select>
+        </lable>
+        <section id="encryptionElements"></section>
+      </fieldset>
     </header>
 
     <ul id="onlineUsers"></ul>
@@ -22,13 +28,15 @@
     <ul id="messages"></ul>
     <section id='typing'></section>
 
-    <form action="">
-      <input id="m" placeholder="type a message.." autocomplete="off" /><button>Send</button>
-    </form>
+    <section id="sectionSend">
+      <input id="m" placeholder="type a message.." autocomplete="off" />
+    </section>
     
     <!--<script src="/socket.io/socket.io.js"></script>-->
     <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
     <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+    <script src="RC4.js"></script>
+    <script src="3DES.js"></script>
     <script src="eventHandler.js"></script>
   </body>
 </html>
