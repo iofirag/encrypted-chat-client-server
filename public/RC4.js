@@ -7,11 +7,18 @@
 function RC4(){
   this.S = [];
 }
-RC4.prototype.Crypt = function (plainText) {
+RC4.prototype.Init = function (){
   // Get & Set values
   this.vectorLength = parseInt( $('#vectorLength').val());
   this.key = $('#key').val();
   this.firstBytesDrop = parseInt( $('#firstBytesDrop').val());
+}
+RC4.prototype.Crypt = function (plainText) {
+  this.Init();
+  // // Get & Set values
+  // this.vectorLength = parseInt( $('#vectorLength').val());
+  // this.key = $('#key').val();
+  // this.firstBytesDrop = parseInt( $('#firstBytesDrop').val());
 
   //Create initialization vector
   var iv = GenerateKey(this.vectorLength);

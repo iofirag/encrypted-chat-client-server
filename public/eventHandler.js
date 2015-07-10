@@ -21,51 +21,42 @@ $('#encryptionType').change(function() {
       var key = $('<lable class="encryptionLable">Key (256 Byte):</lable> <input id="key">'+
                       '<input class="keyBt" type="button" value="Gen" id="rc4GenBtn">');
       var firstBytesDrop = $('<lable class="encryptionLable">First byte to drop:</lable> <input id="firstBytesDrop" value="100">');
-      //var save = $('<br><input type="button" value="Save" onclick="cryptAlg.Crypt()">');
       encryptionElements.append(vectorLength);
       encryptionElements.append(key);
       encryptionElements.append(firstBytesDrop);
-      //encryptionElements.append(save);
       
       cryptAlg = new RC4();
       $('#rc4GenBtn').click(function(){
           $('#key').val(GenerateKey(10));
       });
-
-      // execute init crypt on input event for every one of the fields
-      // $('#vectorLength').on('input', RC4Init );
-      // $('#key').on('input', RC4Init );
-      // $('#firstBytesDrop').on('input', RC4Init );
-      // $('#firstBytesDrop').on('input', RC4Init );
-      //genCrypt = RC4GenOutput;
           
       break;
     case '3des':
-      var key1 = $('<lable class="encryptionLable">Key 1 (7 Byte):</lable> <input id="key1" class="encryptionElement"> \
+      var key1 = $('<lable class="encryptionLable">Key 1 (7 Byte):</lable> <input id="key1" class="encryptionElement" value="aaaaaaaaa"> \
                       <input class="keyBt" type="button" id="3desBtn1" value="Generate key">');
-      var key2 = $('<lable class="encryptionLable">Key 2  (7 Byte):</lable> <input id="key2" class="encryptionElement"> \
+      var key2 = $('<lable class="encryptionLable">Key 2  (7 Byte):</lable> <input id="key2" class="encryptionElement" value="bbbbbbbbb"> \
                       <input class="keyBt" type="button" id="3desBtn2" value="Generate key">');
-      var key3 = $('<lable class="encryptionLable">Key 3 (7 Byte):</lable> <input id="key3" class="encryptionElement"> \
+      var key3 = $('<lable class="encryptionLable">Key 3 (7 Byte):</lable> <input id="key3" class="encryptionElement" value="ccccccccc"> \
                       <input class="keyBt" type="button" id="3desBtn3" value="Generate key">');
       var opType = $('<lable class="encryptionLable">Oparation Type:</lable> <select id="opType" class="encryptionElement"> \
                       <option value="CBC">CBC</option> \
                       <option value="CFB">CFB</option> \
                       <option value="CTR">CTR</option> \
                     </select>');
-      var save = $('<br><input type="button" value="Save" onclick="3DESInit()">');
       encryptionElements.append(key1);
       encryptionElements.append(key2);
       encryptionElements.append(key3);
       encryptionElements.append(opType);
-      encryptionElements.append(save);
+
+      cryptAlg = new DES3();
       $('#3desBtn1').click(function(){
-          $('#key1').val(GenerateKey(7));
+          $('#key1').val(GenerateKey(9));
       });
       $('#3desBtn2').click(function(){
-          $('#key2').val(GenerateKey(7));
+          $('#key2').val(GenerateKey(9));
       });
       $('#3desBtn3').click(function(){
-          $('#key3').val(GenerateKey(7));
+          $('#key3').val(GenerateKey(9));
       });
       break;
   }
