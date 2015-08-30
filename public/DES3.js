@@ -9,9 +9,9 @@ function DES3(){
 }
 DES3.prototype.Init = function (){
 	// Get & Set values
-	var key1 = $('#key1').val();
-	var key2 = $('#key2').val();
-	var key3 = $('#key3').val();
+	var key1 = fix64Length( $('#key1').val() );
+	var key2 = fix64Length( $('#key2').val() );
+	var key3 = fix64Length( $('#key3').val() );
 	this.key = [key1, key2, key3];
 	this.opMode = $('#opType').val();
 }
@@ -19,18 +19,49 @@ DES3.prototype.Crypt = function (plainText) {
 	// Input Test - 123456789
 	// Get & Set all inputs
 	this.Init();
-	debugger;
-
+	var des = new DES();
 	switch (this.opMode){
 		case 'CBC':
-			// 3 times as 3DES
-			var mixedText = plainText;
-			for (var i=0; i<3; i++){
-				// Crypt plaintext
-				var des = new DES();
-				mixedText = des.Crypt(mixedText, this.key[i]);
+			// var plaintextBitsArray = BitsArrayFromString(plainText);	 //str to bits
+			// var plaintextBitsText = plaintextBitsArray.join('');	// bits to string
+			var plaintextBitsText = BitsArrayFromString(plainText);
+			var plaintextBitsAsMultiple64 = plaintextBitsAsMultiple_64(plaintextBitsText); //fix str to be as multiples of 64 bits
+			console.log(plaintextBitsAsMultiple64.length);
+			var plain64chunks = chunkString(plaintextBitsAsMultiple64, 64);	//split str to chunks of 64bit
+			debugger;
+
+			// iv(64)
+			var iv64 = GenerateBits(64);
+			//for test
+			iv64 = '0101000100100101010011010110011110110101010110110001111101101100';
+			console.log('iv64: '+iv64)
+
+			// Run on all plaintext chunks
+			var ciphertextArr = [];
+			for(var chunk in plain64chunks){
+
+				// Run on all the chars 
+				var plainChunkXorIV ='';
+				for(var charIndex in plain64chunks[chunk]){
+					if (chunk==0){
+						// iv(64) XOR cipher64chunk(64)
+						plainChunkXorIV += String(parseInt(plain64chunks[chunk][charIndex]) ^ parseInt(iv64[charIndex]));
+					}else{
+						// iv(64) XOR cipher64chunk(64)
+						plainChunkXorIV += String(parseInt(plain64chunks[chunk][charIndex]) ^ parseInt(ciphertextArr[chunk-1][charIndex]));
+					}
+				}
+
+				// crypt the xor result 3 times as 3DES
+				var middleMix = des.Crypt(plainChunkXorIV, this.key[0]);
+					middleMix = des.Crypt(middleMix, this.key[1]);
+				var ciphertext = des.Crypt(middleMix, this.key[2]);
+
+				// Save this cipher for after use
+				ciphertextArr.push(ciphertext);
 			}
-			return mixedText;
+
+			return iv64+ciphertextArr.join('');
 			break;
 		case 'CFB':
 
@@ -41,56 +72,246 @@ DES3.prototype.Crypt = function (plainText) {
 	}
 	
 }
+DES3.prototype.Decrypt = function(vecCipherText) {
+	// Get & Set all inputs
+	this.Init();
+	var des = new DES();
+	switch (this.opMode){
+		case 'CBC':
+			var cipher64chunks = chunkString(vecCipherText, 64);	//split str to chunks of 64bit
+			
+			var iv64 = cipher64chunks.shift();	// initialization vector
+			console.log('iv64: '+iv64)
+
+			// Run on all plaintext chunks
+			var plaintextArr = [];
+			for(var chunk in cipher64chunks){
+
+				// crypt the xor result 3 times as 3DES
+				var middleMix = des.Decrypt(cipher64chunks[chunk], this.key[2]);
+					middleMix = des.Decrypt(middleMix, this.key[1]);
+					middleMix = des.Decrypt(middleMix, this.key[0]);
+
+				// Run on all the chars 
+				var plaintextChunk ='';
+				for(var charIndex in middleMix){
+					if (chunk==0){
+				 		// iv(64) XOR cipher64chunks(64)
+						plaintextChunk += String(parseInt(middleMix[charIndex]) ^ parseInt(iv64[charIndex]));
+					}else{
+				 		// iv(64) XOR cipher64chunks(64)
+						plaintextChunk += String(parseInt(middleMix[charIndex]) ^ parseInt(cipher64chunks[chunk-1][charIndex]));
+					}
+				}
+
+				// Save this cipher for after use
+				plaintextArr.push(plaintextChunk);
+			}
+
+			var plaintextBits = plaintextArr.join('');
+			debugger;
+			var plaintext = fromBitsToText(plaintextBits);
+			debugger;
+			return plaintext;
+			break;
+		case 'CFB':
+
+			break;
+		case 'CTR':
+
+			break;
+	}
+}
 
 
+function fromBitsToText(bitsStr){
+	var charsAsBits = chunkString(bitsStr, 8);
+	debugger;
+	var text = "";
+	for (var charIndex in charsAsBits){
+	   text += String.fromCharCode(parseInt(charsAsBits[charIndex], 2))
+	}
+	return text;
+}
+function fix64Length(str){
+	var strModify = str;
+	for (var i=0; i<64-str.length; i++){
+		strModify += '0';
+	}
+	return strModify;
+}
 
+function plaintextBitsAsMultiple_64(str) {
+	var nullChar = '00000000';
+	console.log('length: '+str.length+ 'before: '+str);
 
+	// next 64 multiple
+	//var fixLength = Math.ceil( str.length/64 )*64;
+	debugger;
+	var modifyStr=str;
+	while (modifyStr.length % 64 != 0){
+		modifyStr += String(nullChar);
+	}
 
+	// for (var i=str.length; i<fixLength; i++){
+	// // 	modifyStr+= String(0);
+	// }
 
+	
+	console.log('length: '+modifyStr.length+ 'after: '+modifyStr);
+	return modifyStr;
+}
+
+function chunkString(str, length) {
+  return str.match(new RegExp('.{1,' + length + '}', 'g'));
+}
+
+function GenerateBits(length){
+	var bits='';
+	for (var i=0; i<length; i++){
+		bits += String(GenerateBit());
+	}
+	return bits;
+}
 
 
 
 
 // 3DES
 function DES(){
-	this.premutation = [];
+	this.P = [	15,6,19,20,
+				28,11,27,16,
+				0,14,22,25,
+				4,17,30,9,
+				1,7,23,13,
+				31,26,2,8,
+				18,12,29,5,
+				21,10,3,24];
+
+	// 64bit static Initial Permutation tables (use as pointers table)
+	this.IpTable = [	57, 49, 41, 33, 25, 17, 9, 1, 
+						59, 51, 43, 35, 27, 19, 11, 3, 
+						61, 53, 45, 37, 29, 21, 13, 5, 
+						63, 55, 47, 39, 31, 23, 15, 7, 
+						56, 48, 40, 32, 24, 16,  8, 0, 
+						58, 50, 42, 34, 26, 18, 10, 2, 
+						60, 52, 44, 36, 28, 20, 12, 4, 
+						62, 54, 46, 38, 30, 22, 14, 6];
+
+	// 64bit static Initial Permutation tables (use as pointers table)
+	this.IpInvertTable = [	39, 7, 47, 15, 55, 23, 63, 31,
+					 		38, 6, 46, 14, 54, 22, 62, 30,
+					 		37, 5, 45, 13, 53, 21, 61, 29,
+					 		36, 4, 44, 12, 52, 20, 60, 28,
+					 		35, 3, 43, 11, 51, 19, 59, 27, 
+					 		34, 2, 42, 10, 50, 18, 58, 26, 
+					 		33, 1, 41,  9, 49, 17, 57, 25, 
+					 		32, 0, 40,  8, 48, 16, 56, 24];
+
+	this.E = [	31,0, 1, 2, 3, 4,
+				3, 4, 5, 6, 7, 8,
+				7, 8, 9,10,11,12,
+				11,12,13,14,15,16,
+				15,16,17,18,19,20,
+				19,20,21,22,23,24,
+				23,24,25,26,27,28,
+				27,28,29,30,31, 0 ];
+
+	
+
+	this.S_box = [
+					[	// S0
+						[14,4,13,1,2,15,11,8,3,10,6,12,5,9,0,7],
+						[0,15,7,4,14,2,13,1,10,6,12,11,9,5,3,8],
+						[4,1,14,8,13,6,2,11,15,12,9,7,3,10,5,0],
+						[15,12,8,2,4,9,1,7,5,11,3,14,10,0,6,13]
+					],[	// S1
+						[15,1,8,14,6,11,3,4,9,7,2,13,12,0,5,10],
+						[3,13,4,7,15,2,8,14,12,0,1,10,6,9,11,5],
+						[0,14,7,11,10,4,13,1,5,8,12,6,9,3,2,15],
+						[13,8,10,1,3,15,4,2,11,6,7,12,0,5,14,9]
+					],[	// S2
+						[10,0,9,14,6,3,15,5,1,13,12,7,11,4,2,8],
+						[13,7,0,9,3,4,6,10,2,8,5,14,12,11,15,1],
+						[13,6,4,9,8,15,3,0,11,1,2,12,5,10,14,7],
+						[1,10,13,0,6,9,8,7,4,15,14,3,11,5,2,12]//*check
+					],[	// S3
+						[7,13,14,3,0,6,9,10,1,2,8,5,11,12,4,15],
+						[13,8,11,5,6,15,0,3,4,7,2,12,1,10,14,9],
+						[10,6,9,0,12,11,7,13,15,1,3,14,5,2,8,4],
+						[3,15,0,6,10,1,13,8,9,4,5,11,12,7,2,14]
+					],[	// S4
+						[2,12,4,1,7,10,11,6,8,5,3,15,13,0,14,9],
+						[14,11,2,12,4,7,13,1,5,0,15,10,3,9,8,6],
+						[4,2,1,11,10,13,7,8,15,9,12,5,6,3,0,14],
+						[11,8,12,7,1,14,2,13,6,15,0,9,10,4,5,3]
+					],[	// S5
+						[12,1,10,15,9,2,6,8,0,13,3,4,14,7,5,11],
+						[10,15,4,2,7,12,9,5,6,1,13,14,0,11,3,8],
+						[9,14,15,5,2,8,12,3,7,0,4,10,1,13,11,6],
+						[4,3,2,12,9,5,15,10,11,14,1,7,6,0,8,13]
+					],[	// S6
+						[4,11,2,14,15,0,8,13,3,12,9,7,5,10,6,1],
+						[13,0,11,7,4,9,1,10,14,3,5,12,2,15,8,6],
+						[1,4,11,13,12,3,7,14,10,15,6,8,0,5,9,2],
+						[6,11,13,8,1,4,10,7,9,5,0,15,14,2,3,12]
+					],[	// S7
+						[13,2,8,4,6,15,11,1,10,9,3,14,5,0,12,7],
+						[1,15,13,8,10,3,7,4,12,5,6,11,0,14,9,2],
+						[7,11,4,1,9,12,14,2,0,6,10,13,15,3,5,8],
+						[2,1,14,7,4,10,8,13,15,12,9,0,3,5,6,11]
+					]
+		];
 }
-DES.prototype.Crypt = function (plainText, key) {
-	var plainText64Bits = PaddingTo64Bits(BitsArrayFromString(plainText));
-	var key64Bits = PaddingTo64Bits(BitsArrayFromString(key));
+DES.prototype.Crypt = function (plaintext64BitsStr, key64BitsStr) {
+	debugger;
+	console.log('Crypt()');
+	console.log('(input) plain: '+plaintext64BitsStr);
+	console.log('(input) key: '+key64BitsStr);
+	// Hash plaintext with IP table
+	var mixedText = this.IpHash(plaintext64BitsStr);
+	// Create 16 keys from 1 input (8 Byte = 7Byte key + 1Byte for err) key
+	var keys16 = this.Key16From1Key(key64BitsStr);
+	
+
+	// Split mixed text for 2 String: L,R
+	mixedText = this.splitLREncrypt(mixedText, keys16);
+	
+
+	// Hash again mixedText with IP^-1 table
+	var ciphertext = this.IpInvertHash(mixedText);
+	console.log('(output) ciphertext: '+ciphertext);
+	return ciphertext;
+}
+DES.prototype.Decrypt = function (ciphertext64BitsStr, key64BitsStr) {
+	console.log('Decrypt()');
+	console.log('(input) cipher: '+ciphertext64BitsStr);
+	console.log('(input) key: '+key64BitsStr);
 
 	// Hash plaintext with IP table
-	var mixedText = this.IpHash(plainText64Bits);		//console.log(genOutput);
-	
+	var mixedText = this.IpHash(ciphertext64BitsStr);
 	// Create 16 keys from 1 input (8 Byte = 7Byte key + 1Byte for err) key
-	var keys16 = this.Key16From1Key(key64Bits);
-	
-	// Split mixed text for 2 String: L,R
-	mixedText = this.splitLR(mixedText, keys16);
-	
-	// Hash again mixedText with IP^-1 table
-	mixedText = this.IpInvertHash(mixedText);
+	var keys16 = this.Key16From1Key(key64BitsStr);
 
-	return mixedText.join('');
+
+	// Split mixed text for 2 String: L,R
+	mixedText = this.splitLRDecrypt(mixedText, keys16);
+
+
+	// Hash again mixedText with IP^-1 table
+	var plaintext = this.IpInvertHash(mixedText);
+	console.log('(output) plain is: '+plaintext);
+	return plaintext;
+
 }
 
-
-DES.prototype.IpHash = function (plainText64Bits){
-	// 64bit static Initial Permutation tables (use as pointers table)
-	IpTable = [	57, 49, 41, 33, 25, 17, 9, 1, 
-				59, 51, 43, 35, 27, 19, 11, 3, 
-				61, 53, 45, 37, 29, 21, 13, 5, 
-				63, 55, 47, 39, 31, 23, 15, 7, 
-				56, 48, 40, 32, 24, 16,  8, 0, 
-				58, 50, 42, 34, 26, 18, 10, 2, 
-				60, 52, 44, 36, 28, 20, 12, 4, 
-				62, 54, 46, 38, 30, 22, 14, 6];
-
-	console.log(plainText64Bits);
+DES.prototype.IpHash = function (plainText64Bits){//Works good!
+	//console.log(plainText64Bits);
+	//debugger;
 	// hash IP
-	var genOutput = [];
+	var genOutput = '';
 	for (var i=0; i<64; i++){
-		genOutput.push( plainText64Bits[ IpTable[i] ] );
+		genOutput += String(plainText64Bits[ this.IpTable[i] ]);
 	}
 	return genOutput;
 }
@@ -104,9 +325,9 @@ DES.prototype.Key16From1Key = function (key64Bits) {//mixed text of 64 bit
 			D: [62, 54, 46, 38, 30, 22, 14,
 				 6, 61, 53, 45, 37, 29, 21, 
 				13, 5, 60, 52, 44, 36, 28, 
-				20, 12, 12, 27, 19, 11, 3]
+				20, 12, 4, 27, 19, 11, 3]
 	};
-	var PC2 = [	13, 16, 10, 23, 0, 4, 
+	var PC2 = [13, 16, 10, 23, 0, 4, 
 				 2, 27, 14, 5, 20, 9, 
 				22, 18, 11, 3, 25, 7, 
 				15, 6, 26, 19, 12, 1, 
@@ -115,7 +336,7 @@ DES.prototype.Key16From1Key = function (key64Bits) {//mixed text of 64 bit
 				43, 48, 38, 55, 33, 52, 
 				45, 41, 49, 35, 28, 31];
 
-	console.log('key64Bits = ',key64Bits);
+	//console.log('key64Bits = ',key64Bits);
 	var keys16 = [];
 	for (var i=0; i<16; i++){
 		// Do SHIFT LEFT
@@ -164,12 +385,13 @@ DES.prototype.Key16From1Key = function (key64Bits) {//mixed text of 64 bit
 	}
 	return keys16;
 }
-DES.prototype.splitLR = function (mixedTextAsBitsArray, keys16) {//mixed text of 64 bit
+DES.prototype.splitLREncrypt = function (mixedTextAsBitsArray, keys16) {//mixed text of 64 bit
 	console.log('mixedText = '+mixedTextAsBitsArray);
+	debugger;
 	// Split mixedText to L,R every one 32bit
 	var L = mixedTextAsBitsArray.slice(0,32);
 	var R = mixedTextAsBitsArray.slice(32,32+64);
-	console.log(L+'\n'+R);
+	console.log('L+R: '+ L+'\n'+R);
 
 	// Make 16 rounds
 	for (var i=0; i<16; i++){
@@ -179,193 +401,253 @@ DES.prototype.splitLR = function (mixedTextAsBitsArray, keys16) {//mixed text of
 
 		// After changes
 		L = R_before;			//Li = R i-1
-		R = calcL_XOR_F(L_before, R_before, keys16[i]);	//calc Ri = Li-1 XOR f(Ri-1 , Ki)
+		R = this.calcL_XOR_F(L_before, R_before, keys16[i]);	//calc Ri = Li-1 XOR f(Ri-1 , Ki)
+	}
+
+	var R16L16 = R.concat(L);
+	return R16L16;
+}
+/*	
+ *	L_before(32bit), 
+ *	R_before(32bit), 
+ *	keys[i] (48bit)  
+ *	output 32bit string
+ */
+DES.prototype.calcL_XOR_F = function(L_before, R_before, key){
+	var calcXor = '';
+	var fOutput = this.fCalc(R_before, key);
+	for (var i=0; i<32; i++){
+		var res = parseInt(L_before[i]) ^ parseInt(fOutput[i]);
+		calcXor += String(res);
+	}
+	return calcXor;
+}
+
+	
+DES.prototype.fCalc = function(R_before32, key){
+	// NEED Q.A
+	var R_padding48 = this.f_paddingInputByExpandTable(R_before32);	// padding R(32bit) to 48bit
+	var xorArrRes = this.f_xorBetweenRAndKey(R_padding48, key);
+	var chunks8of6bits = this.f_split48to8chunks(xorArrRes);
+	var joinChunks32Str = this.f_s_boxes(chunks8of6bits);
+	var joinChunks32HashStr = this.f_PHash(joinChunks32Str);
+	return joinChunks32HashStr;
+}
+/*	
+ *	1) this function padding R_before(32bit) to 48bit
+ *		output 48bit array
+ */
+DES.prototype.f_paddingInputByExpandTable = function(R_before32){
+	//console.log(R_before32);
+	// padding R to 48
+	//var R_padding48 = [];
+	//debugger;
+	var R_padding48 = '';
+	for (var i=0; i<48; i++){
+		R_padding48 += String(R_before32[ this.E[i] ]);
+	}
+	return R_padding48;
+}
+/*	
+ *	2) this function calc XOR between R_padding48(48bit), key(48bit)
+ *		output 48bit array
+ */
+DES.prototype.f_xorBetweenRAndKey = function(R_padding48, key){
+	var xorArrRes = '';
+	for (var i=0; i<48; i++){
+		var temp = parseInt(R_padding48[i]) ^ parseInt(key[i]);
+		xorArrRes += String(temp);
+	}
+	return xorArrRes;
+}
+/*	
+ *	3.a) this function split the xor-result(48bit) into 8 chunks of (6bit)
+ *		output 8 cells array with 6bits every one.
+ *		[111111,010101,000000,...]
+ */
+DES.prototype.f_split48to8chunks = function(xorArrRes){
+	var chunks8of6bits = [];
+	for(var i=0; i<8; i++){
+		chunks8of6bits.push( String(xorArrRes.slice(i*6, (i*6)+6) ) );
+	}
+	return chunks8of6bits;
+}
+/*	
+ *	3.b) this function calc every chunk(6bit) in s_boxes to get a new (4bit)
+ *		4bits*8 = 32bits as string
+ */
+DES.prototype.f_s_boxes = function(chunks8of6bits){
+	var chunks8of4bits = [];
+	for(var i=0; i<8; i++){
+		var leftBit = chunks8of6bits[i][0];
+		var rightBit = chunks8of6bits[i][5];
+		var leftRightBitsStr = leftBit+''+rightBit;		
+		var line = parseInt(leftRightBitsStr,2);
+
+		var mid1 = chunks8of6bits[i][1];
+		var mid2 = chunks8of6bits[i][2];
+		var mid3 = chunks8of6bits[i][3];
+		var mid4 = chunks8of6bits[i][4];
+		var middleBitsStr = mid1+''+mid2+''+mid3+''+mid4;
+		var column = parseInt(middleBitsStr,2);
+
+		// Get (4bits) from S-Box[i]
+		var s_box_res = this.S_box[i][line][column];
+		var s_box_res_bits = dec2bin(s_box_res);
+		var s_box_res_bits4Fixed = fixedInputTo4Bits(s_box_res_bits);
+		chunks8of4bits.push(s_box_res_bits4Fixed);
+	}
+	var joinChunks32Str = chunks8of4bits.join('');
+	return joinChunks32Str;
+}
+/*	
+ *	4) this function hash allChunks32(32bit) with P table
+ *		output 32bit string
+ */
+DES.prototype.f_PHash = function(joinChunks32){
+	// padding R to 48
+	var joinChunks32Hash = '';
+	for (var i=0; i<32; i++){
+		joinChunks32Hash += String(joinChunks32[ this.P[i] ]);
+	}
+	//var joinChunks32HashStr = joinChunks32Hash.join('');
+	return joinChunks32Hash;
+}
+
+
+DES.prototype.splitLRDecrypt = function (mixedTextAsBitsArray, keys16) {//mixed text of 64 bit
+	console.log('mixedText = '+mixedTextAsBitsArray);
+	// Split mixedText to L,R every one 32bit
+	var R = mixedTextAsBitsArray.slice(0,32);
+	var L = mixedTextAsBitsArray.slice(32,32+64);
+	//console.log(L+'\n'+R);
+
+	// Make 16 rounds (start from 16)
+	for (var i=15; i>=0; i--){
+		// Before changes
+		var L_before = L;
+		var R_before = R;
+
+		// After changes
+		L = R_before;			//Li = R i-1
+		R = this.calcL_XOR_F(L_before, R_before, keys16[i]);	//calc Ri = Li-1 XOR f(Ri-1 , Ki)
 	}
 
 	var L16R16 = L.concat(R);
 	return L16R16;
-
+}
 	/*	
 	 *	L_before(32bit), 
 	 *	R_before(32bit), 
 	 *	keys[i] (48bit)  
 	 *	output 32bit string
 	 */
-	function calcL_XOR_F(L_before, R_before, key){
-		var calcXor = [];
-		var fOutput = fCalc(R_before, key);
-		for (var i=0; i<32; i++){
-			var temp = L_before[i] ^ parseInt(fOutput[i]);
-			calcXor.push(temp);
-		}
-		return calcXor;
-	}
+	// function calcL_XOR_F(L_before, R_before, key){
+	// 	var calcXor = '';
+	// 	var fOutput = fCalc(R_before, key);
+	// 	for (var i=0; i<32; i++){
+	// 		var temp = parseInt(L_before[i]) ^ parseInt(fOutput[i]);
+	// 		calcXor += String(temp);
+	// 	}
+	// 	return calcXor;
+	// }
 
 	
-	function fCalc(R_before32, key){
-		// NEED Q.A
-		var R_padding48 = f_paddingInputByExpandTable(R_before32);	// padding R(32bit) to 48bit
-		var xorArrRes = f_xorBetweebRAndKey(R_padding48, key);
-		var chunks8of6bits = f_split48to8chunks(xorArrRes);
-		var joinChunks32Str = f_s_boxes(chunks8of6bits);
-		var joinChunks32HashStr = f_PHash(joinChunks32Str);
-		return joinChunks32HashStr;
-	}
+	// function fCalc(R_before32, key){
+	// 	// NEED Q.A
+	// 	var R_padding48 = this.f_paddingInputByExpandTable(R_before32);	// padding R(32bit) to 48bit
+	// 	var xorArrRes = this.f_xorBetweenRAndKey(R_padding48, key);
+	// 	var chunks8of6bits = this.f_split48to8chunks(xorArrRes);
+	// 	var joinChunks32Str = this.f_s_boxes(chunks8of6bits);
+	// 	var joinChunks32HashStr = this.f_PHash(joinChunks32Str);
+	// 	return joinChunks32HashStr;
+	// }
 	/*	
 	 *	1) this function padding R_before(32bit) to 48bit
 	 *		output 48bit array
 	 */
-	function f_paddingInputByExpandTable(R_before32){
-		var E = [	31,0, 1, 2, 3, 4,
-				 	3, 4, 5, 6, 7, 8,
-				 	7, 8, 9,10,11,12,
-					11,12,13,14,15,16,
-					15,16,17,18,19,20,
-					19,20,21,22,23,24,
-					23,24,25,26,27,28,
-					27,28,29,30,31, 0 ];
-		console.log(R_before32);
-		// padding R to 48
-		var R_padding48 = [];
-		for (var i=0; i<48; i++){
-			R_padding48.push( R_before32[ E[i] ] );
-		}
-		return R_padding48;
-	}
+	// function f_paddingInputByExpandTable(R_before32){
+
+	// 	//console.log(R_before32);
+	// 	// padding R to 48
+	// 	var R_padding48 = '';
+	// 	for (var i=0; i<48; i++){
+	// 		R_padding48 += String( R_before32[ this.E[i] ]);
+	// 	}
+	// 	return R_padding48;
+	// }
 	/*	
 	 *	2) this function calc XOR between R_padding48(48bit), key(48bit)
 	 *		output 48bit array
 	 */
-	function f_xorBetweebRAndKey(R_padding48, key){
-		var xorArrRes = [];
-		for (var i=0; i<48; i++){
-			var temp = R_padding48[i] ^ key[i];
-			xorArrRes.push(temp);
-		}
-		return xorArrRes;
-	}
+	// function f_xorBetweebRAndKey(R_padding48, key){
+	// 	var xorArrRes = [];
+	// 	for (var i=0; i<48; i++){
+	// 		var temp = parseInt(R_padding48[i]) ^ parseInt(key[i]);
+	// 		xorArrRes += String(temp);
+	// 	}
+	// 	return xorArrRes;
+	// }
 	/*	
 	 *	3.a) this function split the xor-result(48bit) into 8 chunks of (6bit)
 	 *		output 8 cells array with 6bits every one.
 	 *		[111111,010101,000000,...]
 	 */
-	function f_split48to8chunks(xorArrRes){
-		var chunks8of6bits = [];
-		for(var i=0; i<8; i++){
-			chunks8of6bits.push( xorArrRes.slice(i*6, (i*6)+6) );
-		}
-		return chunks8of6bits;
-	}
+	// function f_split48to8chunks(xorArrRes){
+	// 	var chunks8of6bits = '';
+	// 	for(var i=0; i<8; i++){
+	// 		chunks8of6bits += String( xorArrRes.slice(i*6, (i*6)+6) );
+	// 	}
+	// 	return chunks8of6bits;
+	// }
 	/*	
 	 *	3.b) this function calc every chunk(6bit) in s_boxes to get a new (4bit)
 	 *		4bits*8 = 32bits as string
 	 */
-	function f_s_boxes(chunks8of6bits){
-		var S_box = [
-						[	// S0
-							[14,4,13,1,2,15,11,8,3,10,6,12,5,9,0,7],
-							[0,15,7,4,14,2,13,1,10,6,12,11,9,5,3,8],
-							[4,1,14,8,13,6,2,11,15,12,9,7,3,10,5,0],
-							[15,12,8,2,4,9,1,7,5,11,3,14,10,0,6,13]
-						],[	// S1
-							[15,1,8,14,6,11,3,4,9,7,2,13,12,0,5,10],
-							[3,13,4,7,15,2,8,14,12,0,1,10,6,9,11,5],
-							[0,14,7,11,10,4,13,1,5,8,12,6,9,3,2,15],
-							[13,8,10,1,3,15,4,2,11,6,7,12,0,5,14,9]
-						],[	// S2
-							[10,0,9,14,6,3,15,5,1,13,12,7,11,4,2,8],
-							[13,7,0,9,3,4,6,10,2,8,5,14,12,11,15,1],
-							[13,6,4,9,8,15,3,0,11,1,2,12,5,10,14,7],
-							[1,10,13,0,6,9,8,7,4,15,14,3,11,5,2,12]//*check
-						],[	// S3
-							[7,13,14,3,0,6,9,10,1,2,8,5,11,12,4,15],
-							[13,8,11,5,6,15,0,3,4,7,2,12,1,10,14,9],
-							[10,6,9,0,12,11,7,13,15,1,3,14,5,2,8,4],
-							[3,15,0,6,10,1,13,8,9,4,5,11,12,7,2,14]
-						],[	// S4
-							[2,12,4,1,7,10,11,6,8,5,3,15,13,0,14,9],
-							[14,11,2,12,4,7,13,1,5,0,15,10,3,9,8,6],
-							[4,2,1,11,10,13,7,8,15,9,12,5,6,3,0,14],
-							[11,8,12,7,1,14,2,13,6,15,0,9,10,4,5,3]
-						],[	// S5
-							[12,1,10,15,9,2,6,8,0,13,3,4,14,7,5,11],
-							[10,15,4,2,7,12,9,5,6,1,13,14,0,11,3,8],
-							[9,14,15,5,2,8,12,3,7,0,4,10,1,13,11,6],
-							[4,3,2,12,9,5,15,10,11,14,1,7,6,0,8,13]
-						],[	// S6
-							[4,11,2,14,15,0,8,13,3,12,9,7,5,10,6,1],
-							[13,0,11,7,4,9,1,10,14,3,5,12,2,15,8,6],
-							[1,4,11,13,12,3,7,14,10,15,6,8,0,5,9,2],
-							[6,11,13,8,1,4,10,7,9,5,0,15,14,2,3,12]
-						],[	// S7
-							[13,2,8,4,6,15,11,1,10,9,3,14,5,0,12,7],
-							[1,15,13,8,10,3,7,4,12,5,6,11,0,14,9,2],
-							[7,11,4,1,9,12,14,2,0,6,10,13,15,3,5,8],
-							[2,1,14,7,4,10,8,13,15,12,9,0,3,5,6,11]
-						]
-		];
-		var chunks8of4bits = [];
-		for(var i=0; i<8; i++){
-			var leftBit = chunks8of6bits[i][0];
-			var rightBit = chunks8of6bits[i][5];
-			var leftRightBitsStr = leftBit+''+rightBit;		
-			var line = parseInt(leftRightBitsStr,2);
+	// function f_s_boxes(chunks8of6bits){
+	// 	var chunks8of4bits = [];
+	// 	for(var i=0; i<8; i++){
+	// 		var leftBit = chunks8of6bits[i][0];
+	// 		var rightBit = chunks8of6bits[i][5];
+	// 		var leftRightBitsStr = leftBit+''+rightBit;		
+	// 		var line = parseInt(leftRightBitsStr,2);
 
-			var mid1 = chunks8of6bits[i][1];
-			var mid2 = chunks8of6bits[i][2];
-			var mid3 = chunks8of6bits[i][3];
-			var mid4 = chunks8of6bits[i][4];
-			var middleBitsStr = mid1+''+mid2+''+mid3+''+mid4;
-			var column = parseInt(middleBitsStr,2);
+	// 		var mid1 = chunks8of6bits[i][1];
+	// 		var mid2 = chunks8of6bits[i][2];
+	// 		var mid3 = chunks8of6bits[i][3];
+	// 		var mid4 = chunks8of6bits[i][4];
+	// 		var middleBitsStr = mid1+''+mid2+''+mid3+''+mid4;
+	// 		var column = parseInt(middleBitsStr,2);
 
-			// Get (4bits) from S-Box[i]
-			var s_box_res = S_box[i][line][column];
-			var s_box_res_bits = dec2bin(s_box_res);
-			var s_box_res_bits4Fixed = fixedInputTo4Bits(s_box_res_bits);
-			chunks8of4bits.push(s_box_res_bits4Fixed);
-		}
-		var joinChunks32Str = chunks8of4bits.join('');
-		return joinChunks32Str;
-	}
+	// 		// Get (4bits) from S-Box[i]
+	// 		var s_box_res = this.S_box[i][line][column];
+	// 		var s_box_res_bits = dec2bin(s_box_res);
+	// 		var s_box_res_bits4Fixed = fixedInputTo4Bits(s_box_res_bits);
+	// 		chunks8of4bits.push(s_box_res_bits4Fixed);
+	// 	}
+	// 	var joinChunks32Str = chunks8of4bits.join('');
+	// 	return joinChunks32Str;
+	// }
 	/*	
 	 *	4) this function hash allChunks32(32bit) with P table
 	 *		output 32bit string
 	 */
-	function f_PHash(joinChunks32){
-		var P = [	15,6,19,20,
-					28,11,27,16,
-					0,14,22,25,
-					4,17,30,9,
-					1,7,23,13,
-					31,26,2,8,
-					18,12,29,5,
-					21,10,3,24];
-		// padding R to 48
-		var joinChunks32Hash = [];
-		for (var i=0; i<48; i++){
-			joinChunks32Hash.push( joinChunks32[ P[i] ] );
-		}
-		var joinChunks32HashStr = joinChunks32Hash.join('');
-		return joinChunks32HashStr;
-	}
+	// function f_PHash(joinChunks32){
+	// 	// padding R to 48
+	// 	var joinChunks32Hash = '';
+	// 	for (var i=0; i<48; i++){
+	// 		joinChunks32Hash += String( joinChunks32[ this.P[i] ] );
+	// 	}
+	// 	//var joinChunks32HashStr = joinChunks32Hash.join('');
+	// 	return joinChunks32Hash;
+	// }
 
-}
-DES.prototype.IpInvertHash = function (mixedText64Bits){
-	// 64bit static Initial Permutation tables (use as pointers table)
-	IpInvertTable = [39, 7, 47, 15, 55, 23, 63, 31,
-					 38, 6, 46, 14, 54, 22, 62, 30,
-					 37, 5, 45, 13, 53, 21, 61, 29,
-					 36, 4, 44, 12, 52, 20, 60, 28,
-					 35, 3, 43, 11, 51, 19, 59, 27, 
-					 34, 2, 42, 10, 50, 18, 58, 26, 
-					 33, 1, 41,  9, 49, 17, 57, 25, 
-					 32, 0, 40,  8, 48, 16, 56, 24];
-
-	console.log(mixedText64Bits);
+DES.prototype.IpInvertHash = function (mixedText64Bits){// Works good.
+	//console.log(mixedText64Bits);
 	// hash IP
-	var genOutput = [];
+	var genOutput = '';
 	for (var i=0; i<64; i++){
-		genOutput.push( mixedText64Bits[ IpInvertTable[i] ] );
+		genOutput += String( mixedText64Bits[ this.IpInvertTable[i] ] );
 	}
 	return genOutput;
 }
@@ -373,31 +655,47 @@ DES.prototype.IpInvertHash = function (mixedText64Bits){
 
 
 
-
-
-function GenerateKey(length) {
-  for(var i=0, key = []; i < length; ++i)
-      key[i] = 1 + ((Math.random() * 255) << 0);
-  return String.fromCharCode.apply(String, key);
+function GenerateBit(){
+	return Math.round( Math.random() );
 }
+
+// function GenerateKey(length) {
+//   for(var i=0, key = []; i < length; ++i)
+//       key[i] = 1 + ((Math.random() * 255) << 0);
+//   return String.fromCharCode.apply(String, key);
+// }
 function BitsArrayFromString(str){
-	var bits = [];
-	for(var i=0; i<str.length; i++){ 
+	var CR = 13;// =0x0D;
+	var LINE_FEED = 10; //= 0x0A;
+
+	var bits = '';
+	for(var i=0; i<str.length; i++){
 		var strBits = str.charCodeAt(i).toString(2);
-		for (var j=0; j<strBits.length; j++){
-			bits.push( parseInt(strBits[j]) );
-		}
+		var strBitsPad = zeropad(strBits);	//str 8 bit length
+		bits += strBitsPad;
 	}
+	bits += zeropad( String( Number(CR).toString(2)) );	// Add Carrige return 
 	console.log('BitsArrayFromString()\nbits: '+bits+' length\n'+bits.length)
 	return bits;
+
+	function zeropad(binariNum){
+    	return "00000000".slice(String(binariNum).length) + binariNum
+  	}
 }
-function PaddingTo64Bits(key) {
-	var paddingKey = key;
-	for (var i=key.length; i<64; i++){
-		paddingKey.push(0);	//as bit
-	}
-	return paddingKey;
-}
+// function PaddingTo64Bits(key) {
+// 	var paddingKey = key;
+// 	for (var i=key.length; i<64; i++){
+// 		paddingKey.push(0);	//as bit
+// 	}
+// 	return paddingKey;
+// }
+// function PaddingTo192Bits(key) {
+// 	var paddingKey = key;
+// 	for (var i=key.length; i<192; i++){
+// 		paddingKey.push(0);	//as bit
+// 	}
+// 	return paddingKey;
+// }
 function dec2bin(dec){
     return (dec >>> 0).toString(2);
 }

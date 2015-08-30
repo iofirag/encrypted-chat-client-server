@@ -27,16 +27,16 @@ $('#encryptionType').change(function() {
       
       cryptAlg = new RC4();
       $('#rc4GenBtn').click(function(){
-          $('#key').val(GenerateKey(10));
+          $('#key').val(GenerateBits(20));
       });
           
       break;
     case '3des':
-      var key1 = $('<lable class="encryptionLable">Key 1 (7 Byte):</lable> <input id="key1" class="encryptionElement" value="aaaaaaaaa"> \
+      var key1 = $('<lable class="encryptionLable">Key 1 (8 Byte):</lable> <input id="key1" class="encryptionElement" value="0100111011111010001001000011001001010011111011101101011111010101"> \
                       <input class="keyBt" type="button" id="3desBtn1" value="Generate key">');
-      var key2 = $('<lable class="encryptionLable">Key 2  (7 Byte):</lable> <input id="key2" class="encryptionElement" value="bbbbbbbbb"> \
+      var key2 = $('<lable class="encryptionLable">Key 2  (8 Byte):</lable> <input id="key2" class="encryptionElement" value="1011010001110010000001100111010100011111101000011111110000000000"> \
                       <input class="keyBt" type="button" id="3desBtn2" value="Generate key">');
-      var key3 = $('<lable class="encryptionLable">Key 3 (7 Byte):</lable> <input id="key3" class="encryptionElement" value="ccccccccc"> \
+      var key3 = $('<lable class="encryptionLable">Key 3 (8 Byte):</lable> <input id="key3" class="encryptionElement" value="1011001110101000011111010000101010100011101010010011000111111011"> \
                       <input class="keyBt" type="button" id="3desBtn3" value="Generate key">');
       var opType = $('<lable class="encryptionLable">Oparation Type:</lable> <select id="opType" class="encryptionElement"> \
                       <option value="CBC">CBC</option> \
@@ -50,13 +50,13 @@ $('#encryptionType').change(function() {
 
       cryptAlg = new DES3();
       $('#3desBtn1').click(function(){
-          $('#key1').val(GenerateKey(9));
+          $('#key1').val(GenerateBits(64));
       });
       $('#3desBtn2').click(function(){
-          $('#key2').val(GenerateKey(9));
+          $('#key2').val(GenerateBits(64));
       });
       $('#3desBtn3').click(function(){
-          $('#key3').val(GenerateKey(9));
+          $('#key3').val(GenerateBits(64));
       });
       break;
   }
@@ -189,6 +189,7 @@ function connectAndChangeView(connectType) {
 
     // If user using cryptographic alg.
     var decryptMsg;
+    debugger
     if (!!cryptAlg) decryptMsg = cryptAlg.Decrypt(msgObj.message);
     else decryptMsg = msgObj.message;
 
