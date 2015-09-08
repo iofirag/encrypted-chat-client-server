@@ -668,7 +668,7 @@ function GenerateBit(){
 function BitsArrayFromString(str){
 	debugger;
 	var CR = 13;// =0x0D;
-	var LINE_FEED = 10; //= 0x0A;
+	//var LINE_FEED = 10; //= 0x0A;
 
 	var bits = '';
 	for(var i=0; i<str.length; i++){
