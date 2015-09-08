@@ -337,7 +337,9 @@ DES.prototype.Key16From1Key = function (key64Bits) {//mixed text of 64 bit
 				43, 48, 38, 55, 33, 52, 
 				45, 41, 49, 35, 28, 31];
 
-	//console.log('key64Bits = ',key64Bits);
+	console.log('(start)PC1:C '+PC1.C);
+	console.log('(start)PC1:D '+PC1.D);
+	console.log('(start)PC2: '+PC2);
 	var keys16 = [];
 	for (var i=0; i<16; i++){
 		// Do SHIFT LEFT
@@ -384,14 +386,17 @@ DES.prototype.Key16From1Key = function (key64Bits) {//mixed text of 64 bit
 		}
 		keys16.push(genKey);
 	}
+	console.log('(end)PC1:C '+PC1.C);
+	console.log('(end)PC1:D '+PC1.D);
+	console.log('(end)PC2: '+PC2);
 	return keys16;
 }
 DES.prototype.splitLREncrypt = function (mixedTextAsBitsArray, keys16) {//mixed text of 64 bit
 	console.log('mixedText = '+mixedTextAsBitsArray);
 	debugger;
 	// Split mixedText to L,R every one 32bit
-	var L = mixedTextAsBitsArray.slice(0,32);
-	var R = mixedTextAsBitsArray.slice(32,32+64);// check again
+	var L = mixedTextAsBitsArray.slice(0,32);//checked
+	var R = mixedTextAsBitsArray.slice(32,32+64);// checked
 	console.log('L+R: '+ L+'\n'+R);
 
 	// Make 16 rounds
@@ -469,7 +474,7 @@ DES.prototype.f_xorBetweenRAndKey = function(R_padding48, key){
 DES.prototype.f_split48to8chunks = function(xorArrRes){
 	var chunks8of6bits = [];
 	for(var i=0; i<8; i++){
-		chunks8of6bits.push( String(xorArrRes.slice(i*6, (i*6)+6) ) );//check again
+		chunks8of6bits.push( String(xorArrRes.slice(i*6, (i*6)+6) ) );//checked
 	}
 	return chunks8of6bits;
 }
@@ -478,7 +483,7 @@ DES.prototype.f_split48to8chunks = function(xorArrRes){
  *		4bits*8 = 32bits as string
  */
 DES.prototype.f_s_boxes = function(chunks8of6bits){
-	var chunks8of4bits = [];
+	var chunks32bits = '';
 	for(var i=0; i<8; i++){
 		var leftBit = chunks8of6bits[i][0];
 		var rightBit = chunks8of6bits[i][5];
@@ -494,12 +499,10 @@ DES.prototype.f_s_boxes = function(chunks8of6bits){
 
 		// Get (4bits) from S-Box[i]
 		var s_box_res = this.S_box[i][line][column];
-		var s_box_res_bits = dec2bin(s_box_res);
-		var s_box_res_bits4Fixed = fixedInputTo4Bits(s_box_res_bits);
-		chunks8of4bits.push(s_box_res_bits4Fixed);
+		var s_box_res_4bits = dec2bin(s_box_res);
+		chunks32bits += s_box_res_4bits;
 	}
-	var joinChunks32Str = chunks8of4bits.join('');
-	return joinChunks32Str;
+	return chunks32bits;
 }
 /*	
  *	4) this function hash allChunks32(32bit) with P table
@@ -667,7 +670,7 @@ function GenerateBit(){
 // }
 function BitsArrayFromString(str){
 	debugger;
-	var CR = 13;// =0x0D;
+	//var nullChar = 0;// =0x0D;
 	//var LINE_FEED = 10; //= 0x0A;
 
 	var bits = '';
@@ -676,8 +679,8 @@ function BitsArrayFromString(str){
 		var strBitsPad = zeroPattern(strBits,8);	//str 8 bit length
 		bits += strBitsPad;
 	}
-	bits += zeroPattern( String( Number(CR).toString(2)) ,8);	// Add Carrige return 
-	console.log('BitsArrayFromString()\nbits: '+bits+' length\n'+bits.length)
+	//bits += zeroPattern( String( Number(CR).toString(2)) ,8);	// Add Carrige return 
+	//console.log('BitsArrayFromString()\nbits: '+bits+' length\n'+bits.length)
 	return bits;
 }
 
