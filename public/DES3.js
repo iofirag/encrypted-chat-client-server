@@ -316,6 +316,7 @@ DES.prototype.IpHash = function (plainText64Bits){//Works good!
 	return genOutput;
 }
 DES.prototype.Key16From1Key = function (key64Bits) {//mixed text of 64 bit
+	//for the key 16 the tables should be the same as the start
 	var PC1 = {
 			C: [56, 48, 40, 32, 24, 16, 8,
 				 0, 57, 49, 41, 33, 25,17,
@@ -343,25 +344,25 @@ DES.prototype.Key16From1Key = function (key64Bits) {//mixed text of 64 bit
 		if (i in [0,1,8,15]){	//because i start from 0, we will check [0,1,8,15] and not [1,2,9,16]
 			/* Do 1 shift - for C,D */
 			//C (first shift)
-			var endItem = PC1.C.pop();
-			PC1.C.unshift(endItem);
+			var startItem = PC1.C.shift();
+			PC1.C.push(startItem);
 			//D (first shift)
-			var endItem = PC1.D.pop();
-			PC1.D.unshift(endItem);
+			var startItem = PC1.D.shift();
+			PC1.D.push(startItem);
 		}else{
 			/* Do 2 shift - for C,D */
 			//C (first shift)
-			var endItem = PC1.C.pop();
-			PC1.C.unshift(endItem);
+			var startItem = PC1.C.shift();
+			PC1.C.push(startItem);
 			//C (second shift)
-			var endItem = PC1.C.pop();
-			PC1.C.unshift(endItem);
+			var startItem = PC1.C.shift();
+			PC1.C.push(startItem);
 			//D (first shift)
-			var endItem = PC1.D.pop();
-			PC1.D.unshift(endItem);
+			var endItem = PC1.D.shift();
+			PC1.D.push(endItem);
 			//D (second shift)
-			var endItem = PC1.D.pop();
-			PC1.D.unshift(endItem);
+			var startItem = PC1.D.shift();
+			PC1.D.push(startItem);
 		}
 
 
@@ -390,7 +391,7 @@ DES.prototype.splitLREncrypt = function (mixedTextAsBitsArray, keys16) {//mixed 
 	debugger;
 	// Split mixedText to L,R every one 32bit
 	var L = mixedTextAsBitsArray.slice(0,32);
-	var R = mixedTextAsBitsArray.slice(32,32+64);
+	var R = mixedTextAsBitsArray.slice(32,32+64);// check again
 	console.log('L+R: '+ L+'\n'+R);
 
 	// Make 16 rounds
@@ -468,7 +469,7 @@ DES.prototype.f_xorBetweenRAndKey = function(R_padding48, key){
 DES.prototype.f_split48to8chunks = function(xorArrRes){
 	var chunks8of6bits = [];
 	for(var i=0; i<8; i++){
-		chunks8of6bits.push( String(xorArrRes.slice(i*6, (i*6)+6) ) );
+		chunks8of6bits.push( String(xorArrRes.slice(i*6, (i*6)+6) ) );//check again
 	}
 	return chunks8of6bits;
 }
@@ -665,23 +666,22 @@ function GenerateBit(){
 //   return String.fromCharCode.apply(String, key);
 // }
 function BitsArrayFromString(str){
+	debugger;
 	var CR = 13;// =0x0D;
 	var LINE_FEED = 10; //= 0x0A;
 
 	var bits = '';
 	for(var i=0; i<str.length; i++){
 		var strBits = str.charCodeAt(i).toString(2);
-		var strBitsPad = zeropad(strBits);	//str 8 bit length
+		var strBitsPad = zeroPattern(strBits,8);	//str 8 bit length
 		bits += strBitsPad;
 	}
-	bits += zeropad( String( Number(CR).toString(2)) );	// Add Carrige return 
+	bits += zeroPattern( String( Number(CR).toString(2)) ,8);	// Add Carrige return 
 	console.log('BitsArrayFromString()\nbits: '+bits+' length\n'+bits.length)
 	return bits;
-
-	function zeropad(binariNum){
-    	return "00000000".slice(String(binariNum).length) + binariNum
-  	}
 }
+
+
 // function PaddingTo64Bits(key) {
 // 	var paddingKey = key;
 // 	for (var i=key.length; i<64; i++){
@@ -696,12 +696,21 @@ function BitsArrayFromString(str){
 // 	}
 // 	return paddingKey;
 // }
+
 function dec2bin(dec){
-    return (dec >>> 0).toString(2);
+    return zeroPattern( (dec >>> 0).toString(2), 4);
 }
-function fixedInputTo4Bits(numAsStr){
-	for(var i=numAsStr.length; i<4; i++){
-		numAsStr = '0'+numAsStr;
+
+function zeroPattern(binariNum, patternLength){
+	var pattern = '';
+	for(i=0; i<patternLength; i++){
+		pattern += '0';
 	}
-	return numAsStr;
+	return pattern.slice(String(binariNum).length) + binariNum
 }
+// function fixedInputTo4Bits(numAsStr){
+// 	for(var i=numAsStr.length; i<4; i++){
+// 		numAsStr = '0'+numAsStr;
+// 	}
+// 	return numAsStr;
+// }

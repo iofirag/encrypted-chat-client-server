@@ -1,0 +1,8 @@
+var des = new DES();
+var key = "0100111011111010001001000011001001010011111011101101011111010101";
+var firstPlain = "0011000100110010001100110110000101100010000011010000000000000000";
+
+var cipher = des.Crypt(firstPlain, key);
+
+var genPlain = des.Decrypt(cipher, key);
+genPlain == firstPlain ? "success" : "fail"
