@@ -22,9 +22,8 @@ DES3.prototype.Crypt = function (plainText) {
 	var des = new DES();
 	switch (this.opMode){
 		case 'CBC':
-			// var plaintextBitsArray = BitsArrayFromString(plainText);	 //str to bits
-			// var plaintextBitsText = plaintextBitsArray.join('');	// bits to string
 			var plaintextBitsText = BitsArrayFromString(plainText);
+			//console.log('plaintextBitsText= '+plaintextBitsText);
 			var plaintextBitsAsMultiple64 = plaintextBitsAsMultiple_64(plaintextBitsText); //fix str to be as multiples of 64 bits
 			console.log(plaintextBitsAsMultiple64.length);
 			var plain64chunks = chunkString(plaintextBitsAsMultiple64, 64);	//split str to chunks of 64bit
@@ -270,8 +269,13 @@ DES.prototype.Crypt = function (plaintext64BitsStr, key64BitsStr) {
 	console.log('(input) key: '+key64BitsStr);
 	// Hash plaintext with IP table
 	var mixedText = this.IpHash(plaintext64BitsStr);
+	console.log('iphash: '+mixedText)
+
 	// Create 16 keys from 1 input (8 Byte = 7Byte key + 1Byte for err) key
 	var keys16 = this.Key16From1Key(key64BitsStr);
+	for(var i in keys16){
+		console.log('key-'+i+' is' +keys16[i])
+	}
 	
 
 	// Split mixed text for 2 String: L,R
@@ -289,7 +293,7 @@ DES.prototype.Decrypt = function (ciphertext64BitsStr, key64BitsStr) {
 	console.log('(input) key: '+key64BitsStr);
 
 	// Hash plaintext with IP table
-	var mixedText = this.IpHash(ciphertext64BitsStr);
+	var mixedText = this.IpInvertHash(ciphertext64BitsStr);
 	// Create 16 keys from 1 input (8 Byte = 7Byte key + 1Byte for err) key
 	var keys16 = this.Key16From1Key(key64BitsStr);
 
@@ -299,7 +303,7 @@ DES.prototype.Decrypt = function (ciphertext64BitsStr, key64BitsStr) {
 
 
 	// Hash again mixedText with IP^-1 table
-	var plaintext = this.IpInvertHash(mixedText);
+	var plaintext = this.IpHash(mixedText);
 	console.log('(output) plain is: '+plaintext);
 	return plaintext;
 
@@ -345,26 +349,23 @@ DES.prototype.Key16From1Key = function (key64Bits) {//mixed text of 64 bit
 		// Do SHIFT LEFT
 		if (i in [0,1,8,15]){	//because i start from 0, we will check [0,1,8,15] and not [1,2,9,16]
 			/* Do 1 shift - for C,D */
-			//C (first shift)
+			//C (left shift)
 			var startItem = PC1.C.shift();
 			PC1.C.push(startItem);
 			//D (first shift)
 			var startItem = PC1.D.shift();
 			PC1.D.push(startItem);
 		}else{
-			/* Do 2 shift - for C,D */
-			//C (first shift)
-			var startItem = PC1.C.shift();
-			PC1.C.push(startItem);
-			//C (second shift)
-			var startItem = PC1.C.shift();
-			PC1.C.push(startItem);
-			//D (first shift)
-			var endItem = PC1.D.shift();
-			PC1.D.push(endItem);
-			//D (second shift)
-			var startItem = PC1.D.shift();
-			PC1.D.push(startItem);
+			/* Do 2 shift - for C,D */		
+			for (var k=0; k<2; k++){
+				//C (left shift)
+				var startItem = PC1.C.shift();
+				PC1.C.push(startItem);
+
+				//D (left shift)
+				var startItem = PC1.D.shift();
+				PC1.D.push(startItem);
+			}
 		}
 
 
@@ -496,7 +497,7 @@ DES.prototype.f_s_boxes = function(chunks8of6bits){
 		var mid4 = chunks8of6bits[i][4];
 		var middleBitsStr = mid1+''+mid2+''+mid3+''+mid4;
 		var column = parseInt(middleBitsStr,2);
-
+		debugger;
 		// Get (4bits) from S-Box[i]
 		var s_box_res = this.S_box[i][line][column];
 		var s_box_res_4bits = dec2bin(s_box_res);
@@ -522,8 +523,8 @@ DES.prototype.f_PHash = function(joinChunks32){
 DES.prototype.splitLRDecrypt = function (mixedTextAsBitsArray, keys16) {//mixed text of 64 bit
 	console.log('mixedText = '+mixedTextAsBitsArray);
 	// Split mixedText to L,R every one 32bit
-	var R = mixedTextAsBitsArray.slice(0,32);
-	var L = mixedTextAsBitsArray.slice(32,32+64);
+	var L = mixedTextAsBitsArray.slice(0,32);
+	var R = mixedTextAsBitsArray.slice(32,32+64);
 	//console.log(L+'\n'+R);
 
 	// Make 16 rounds (start from 16)
@@ -537,8 +538,8 @@ DES.prototype.splitLRDecrypt = function (mixedTextAsBitsArray, keys16) {//mixed 
 		R = this.calcL_XOR_F(L_before, R_before, keys16[i]);	//calc Ri = Li-1 XOR f(Ri-1 , Ki)
 	}
 
-	var L16R16 = L.concat(R);
-	return L16R16;
+	var R16L16 = R.concat(L);
+	return R16L16;
 }
 	/*	
 	 *	L_before(32bit), 

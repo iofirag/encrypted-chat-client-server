@@ -1,11 +1,12 @@
 var des = new DES();
-var key = "0100111011111010001001000011001001010011111011101101011111010101";
-var firstPlain = "0011000100110010001100110110000101100010000011010000000000000000";
+var message = "0000000100100011010001010110011110001001101010111100110111101111";
+var key = "0001001100110100010101110111100110011011101111001101111111110001";
 
-var cipher = des.Crypt(firstPlain, key);
 
-var genPlain = des.Decrypt(cipher, key);
-genPlain == firstPlain ? "success" : "fail"
+var cipher = des.Crypt(message , key);
+
+var plain = des.Decrypt(cipher, key);
+plain == message ? "success" : "fail"
 
 
 
