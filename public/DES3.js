@@ -274,7 +274,7 @@ DES.prototype.Crypt = function (plaintext64BitsStr, key64BitsStr) {
 	// Create 16 keys from 1 input (8 Byte = 7Byte key + 1Byte for err) key
 	var keys16 = this.Key16From1Key(key64BitsStr);
 	for(var i in keys16){
-		console.log('key-'+i+' is' +keys16[i])
+		console.log('K'+i+'=' +keys16[i]);
 	}
 	
 
