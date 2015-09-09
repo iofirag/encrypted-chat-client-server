@@ -43,10 +43,10 @@ DES3.prototype.Crypt = function (plainText) {
 				var plainChunkXorIV ='';
 				for(var charIndex in plain64chunks[chunk]){
 					if (chunk==0){
-						// iv(64) XOR cipher64chunk(64)
+						// iv(64) XOR cipher64chunk
 						plainChunkXorIV += String(parseInt(plain64chunks[chunk][charIndex]) ^ parseInt(iv64[charIndex]));
 					}else{
-						// iv(64) XOR cipher64chunk(64)
+						// cipher64Chunk-1 XOR cipher64chunk
 						plainChunkXorIV += String(parseInt(plain64chunks[chunk][charIndex]) ^ parseInt(ciphertextArr[chunk-1][charIndex]));
 					}
 				}
@@ -82,7 +82,7 @@ DES3.prototype.Decrypt = function(vecCipherText) {
 			var iv64 = cipher64chunks.shift();	// initialization vector
 			console.log('iv64: '+iv64)
 
-			// Run on all plaintext chunks
+			// Run on all cipher chunks
 			var plaintextArr = [];
 			for(var chunk in cipher64chunks){
 
@@ -321,6 +321,17 @@ DES.prototype.IpHash = function (plainText64Bits){//Works good!
 }
 DES.prototype.Key16From1Key = function (key64Bits) {//mixed text of 64 bit
 	//for the key 16 the tables should be the same as the start
+	//var PC1Plus = [
+	// 	56, 48, 40, 32, 24, 16, 8,
+	// 	 0, 57, 49, 41, 33, 25,17,
+	// 	 9, 1, 58, 50, 42, 34, 26, 
+	// 	18, 10, 2, 59, 51, 43, 35,
+	// 	62, 54, 46, 38, 30, 22, 14,
+	// 	 6, 61, 53, 45, 37, 29, 21, 
+	// 	13, 5, 60, 52, 44, 36, 28, 
+	// 	20, 12, 4, 27, 19, 11, 3
+	// ];
+
 	var PC1 = {
 			C: [56, 48, 40, 32, 24, 16, 8,
 				 0, 57, 49, 41, 33, 25,17,
@@ -344,6 +355,14 @@ DES.prototype.Key16From1Key = function (key64Bits) {//mixed text of 64 bit
 	console.log('(start)PC1:C '+PC1.C);
 	console.log('(start)PC1:D '+PC1.D);
 	console.log('(start)PC2: '+PC2);
+	
+	debugger;
+	// Create k+ from k
+	// var key64BitsPlus = '';
+	// for (var i=0; i<56; i++){
+	// 	key64BitsPlus += String(key64Bits[ PC1Plus[i] ]);
+	// }
+
 	var keys16 = [];
 	for (var i=0; i<16; i++){
 		// Do SHIFT LEFT
@@ -523,23 +542,23 @@ DES.prototype.f_PHash = function(joinChunks32){
 DES.prototype.splitLRDecrypt = function (mixedTextAsBitsArray, keys16) {//mixed text of 64 bit
 	console.log('mixedText = '+mixedTextAsBitsArray);
 	// Split mixedText to L,R every one 32bit
-	var L = mixedTextAsBitsArray.slice(0,32);
-	var R = mixedTextAsBitsArray.slice(32,32+64);
+	var R = mixedTextAsBitsArray.slice(0,32);
+	var L = mixedTextAsBitsArray.slice(32,32+64);
 	//console.log(L+'\n'+R);
 
 	// Make 16 rounds (start from 16)
-	for (var i=15; i>=0; i--){
+	for (var i=0; i<16; i++){
 		// Before changes
 		var L_before = L;
 		var R_before = R;
 
 		// After changes
 		L = R_before;			//Li = R i-1
-		R = this.calcL_XOR_F(L_before, R_before, keys16[i]);	//calc Ri = Li-1 XOR f(Ri-1 , Ki)
+		R = this.calcL_XOR_F(L_before, R_before, keys16[15-i]);	//calc Ri = Li-1 XOR f(Ri-1 , Ki)
 	}
 
-	var R16L16 = R.concat(L);
-	return R16L16;
+	var L16R16 = L.concat(R);
+	return L16R16;
 }
 	/*	
 	 *	L_before(32bit), 
