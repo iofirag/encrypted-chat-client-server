@@ -23,17 +23,12 @@ DES3.prototype.Crypt = function (plainText) {
 	switch (this.opMode){
 		case 'CBC':
 			var plaintextBitsText = BitsArrayFromString(plainText);
-			//console.log('plaintextBitsText= '+plaintextBitsText);
 			var plaintextBitsAsMultiple64 = plaintextBitsAsMultiple_64(plaintextBitsText); //fix str to be as multiples of 64 bits
-			console.log(plaintextBitsAsMultiple64.length);
+			//console.log(plaintextBitsAsMultiple64.length);
 			var plain64chunks = chunkString(plaintextBitsAsMultiple64, 64);	//split str to chunks of 64bit
-			debugger;
 
 			// iv(64)
 			var iv64 = GenerateBits(64);
-			//for test
-			iv64 = '0101000100100101010011010110011110110101010110110001111101101100';
-			console.log('iv64: '+iv64)
 
 			// Run on all plaintext chunks
 			var ciphertextArr = [];
@@ -62,10 +57,81 @@ DES3.prototype.Crypt = function (plainText) {
 
 			return iv64+ciphertextArr.join('');
 			break;
-		case 'CFB':
+		case 'OFB':
+			var plaintextBitsText = BitsArrayFromString(plainText);
+			var plaintextBitsAsMultiple64 = plaintextBitsAsMultiple_64(plaintextBitsText); //fix str to be as multiples of 64 bits
+			//console.log(plaintextBitsAsMultiple64.length);
+			var plain64chunks = chunkString(plaintextBitsAsMultiple64, 64);	//split str to chunks of 64bit
 
+			// iv(64)
+			var iv64 = GenerateBits(64);
+
+			// Run on all plaintext chunks
+			var ciphertextArr = [];
+			for(var chunk in plain64chunks){
+				if (chunk==0){
+					var middleMix = des.Crypt(iv64, this.key[0]);
+						middleMix = des.Crypt(middleMix, this.key[1]);
+					var keyIVCipher = des.Crypt(middleMix, this.key[2]);
+				}
+				// Run on all the chars 
+				var plainChunkXorIV ='';
+				for(var charIndex in plain64chunks[chunk]){
+					if (chunk==0){
+						// iv(64) XOR cipher64chunk
+						plainChunkXorIV += String(parseInt(plain64chunks[chunk][charIndex]) ^ parseInt(iv64[charIndex]));
+					}else{
+						// cipher64Chunk-1 XOR cipher64chunk
+						plainChunkXorIV += String(parseInt(plain64chunks[chunk][charIndex]) ^ parseInt(ciphertextArr[chunk-1][charIndex]));
+					}
+				}
+
+				// crypt the xor result 3 times as 3DES
+				var middleMix = des.Crypt(plainChunkXorIV, this.key[0]);
+					middleMix = des.Crypt(middleMix, this.key[1]);
+				var ciphertext = des.Crypt(middleMix, this.key[2]);
+
+				// Save this cipher for after use
+				ciphertextArr.push(ciphertext);
+			}
 			break;
 		case 'CTR':
+			var plaintextBitsText = BitsArrayFromString(plainText);
+			var plaintextBitsAsMultiple64 = plaintextBitsAsMultiple_64(plaintextBitsText); //fix str to be as multiples of 64 bits
+			//console.log(plaintextBitsAsMultiple64.length);
+			var plain64chunks = chunkString(plaintextBitsAsMultiple64, 64);	//split str to chunks of 64bit
+
+			// rundom 64 bit number
+			var num64bits = GenerateBits(64);
+			var ctrDecNumber = parseInt(num64bits,2);
+			var ctrBinNumber = (ctrDecNumber >>> 0).toString(2);
+			var ctrBinNumberFixed64 = zeroPattern(ctrBinNumber, 64);
+
+			// Run on all plaintext chunks
+			var ciphertextArr = [];
+			for(var chunk in plain64chunks){
+				var ctrDecNumberCounterd = ctrDecNumber+chunk;
+				var binNumberCounterd = (ctrDecNumberCounterd >>> 0).toString(2);
+				var binNumberCounterdFixed64 = zeroPattern(binNumberCounterd, 64);
+
+				// crypt the xor result 3 times as 3DES
+				var middleMix = des.Crypt(binNumberCounterdFixed64, this.key[0]);
+					middleMix = des.Crypt(middleMix, this.key[1]);
+					middleMix = des.Crypt(middleMix, this.key[2]);
+
+
+				// Run on all the chars 
+				var plainChunkXorCTRNum ='';
+				for(var charIndex in plain64chunks[chunk]){
+					// middleMix XOR cipher64chunk
+					plainChunkXorCTRNum += String(parseInt(plain64chunks[chunk][charIndex]) ^ parseInt(middleMix[charIndex]));
+				}
+
+				// Save this cipher for after use
+				ciphertextArr.push(plainChunkXorCTRNum);
+			}
+
+			return ctrBinNumberFixed64+ciphertextArr.join('');
 
 			break;
 	}
@@ -108,16 +174,77 @@ DES3.prototype.Decrypt = function(vecCipherText) {
 			}
 
 			var plaintextBits = plaintextArr.join('');
-			debugger;
 			var plaintext = fromBitsToText(plaintextBits);
-			debugger;
 			return plaintext;
 			break;
-		case 'CFB':
+		case 'OFB':
+			var plaintextBitsText = BitsArrayFromString(plainText);
+			var plaintextBitsAsMultiple64 = plaintextBitsAsMultiple_64(plaintextBitsText); //fix str to be as multiples of 64 bits
+			//console.log(plaintextBitsAsMultiple64.length);
+			var plain64chunks = chunkString(plaintextBitsAsMultiple64, 64);	//split str to chunks of 64bit
 
+			// iv(64)
+			var iv64 = GenerateBits(64);
+
+			// Run on all plaintext chunks
+			var ciphertextArr = [];
+			for(var chunk in plain64chunks){
+				if (chunk==0){
+					var middleMix = des.Crypt(iv64, this.key[0]);
+						middleMix = des.Crypt(middleMix, this.key[1]);
+					var keyIVCipher = des.Crypt(middleMix, this.key[2]);
+				}
+				// Run on all the chars 
+				var plainChunkXorIV ='';
+				for(var charIndex in plain64chunks[chunk]){
+					if (chunk==0){
+						// iv(64) XOR cipher64chunk
+						plainChunkXorIV += String(parseInt(plain64chunks[chunk][charIndex]) ^ parseInt(iv64[charIndex]));
+					}else{
+						// cipher64Chunk-1 XOR cipher64chunk
+						plainChunkXorIV += String(parseInt(plain64chunks[chunk][charIndex]) ^ parseInt(ciphertextArr[chunk-1][charIndex]));
+					}
+				}
+
+				// crypt the xor result 3 times as 3DES
+				var middleMix = des.Crypt(plainChunkXorIV, this.key[0]);
+					middleMix = des.Crypt(middleMix, this.key[1]);
+				var ciphertext = des.Crypt(middleMix, this.key[2]);
+
+				// Save this cipher for after use
+				ciphertextArr.push(ciphertext);
+			}
 			break;
 		case 'CTR':
+			var cipher64chunks = chunkString(vecCipherText, 64);	//split str to chunks of 64bit
+			var num64bits = cipher64chunks.shift();	// CTR 64 bits number
+			var ctrDecNumber = parseInt(num64bits,2);
 
+			// Run on all plaintext chunks
+			var ciphertextArr = [];
+			for(var chunk in plain64chunks){
+				var ctrDecNumberCounterd = ctrDecNumber+chunk;
+				var binNumberCounterd = (ctrDecNumberCounterd >>> 0).toString(2);
+				var binNumberCounterdFixed64 = zeroPattern(binNumberCounterd, 64);
+
+				// crypt the xor result 3 times as 3DES
+				var middleMix = des.Crypt(binNumberCounterdFixed64, this.key[0]);
+					middleMix = des.Crypt(middleMix, this.key[1]);
+					middleMix = des.Crypt(middleMix, this.key[2]);
+
+
+				// Run on all the chars 
+				var plainChunkXorCTRNum ='';
+				for(var charIndex in plain64chunks[chunk]){
+					// middleMix XOR cipher64chunk
+					plainChunkXorCTRNum += String(parseInt(plain64chunks[chunk][charIndex]) ^ parseInt(middleMix[charIndex]));
+				}
+
+				// Save this cipher for after use
+				ciphertextArr.push(plainChunkXorCTRNum);
+			}
+
+			return ctrBinNumberFixed64+ciphertextArr.join('');
 			break;
 	}
 }
@@ -125,7 +252,6 @@ DES3.prototype.Decrypt = function(vecCipherText) {
 
 function fromBitsToText(bitsStr){
 	var charsAsBits = chunkString(bitsStr, 8);
-	debugger;
 	var text = "";
 	for (var charIndex in charsAsBits){
 	   text += String.fromCharCode(parseInt(charsAsBits[charIndex], 2))
@@ -146,7 +272,6 @@ function plaintextBitsAsMultiple_64(str) {
 
 	// next 64 multiple
 	//var fixLength = Math.ceil( str.length/64 )*64;
-	debugger;
 	var modifyStr=str;
 	while (modifyStr.length % 64 != 0){
 		modifyStr += String(nullChar);
@@ -178,6 +303,7 @@ function GenerateBits(length){
 
 // 3DES
 function DES(){
+	this.rounds = 16;
 	this.P = [	15,6,19,20,
 				28,11,27,16,
 				0,14,22,25,
@@ -263,7 +389,6 @@ function DES(){
 		];
 }
 DES.prototype.Crypt = function (plaintext64BitsStr, key64BitsStr) {
-	debugger;
 	console.log('Crypt()');
 	console.log('(input) plain: '+plaintext64BitsStr);
 	console.log('(input) key: '+key64BitsStr);
@@ -279,7 +404,7 @@ DES.prototype.Crypt = function (plaintext64BitsStr, key64BitsStr) {
 	
 
 	// Split mixed text for 2 String: L,R
-	mixedText = this.splitLREncrypt(mixedText, keys16);
+	mixedText = this.splitLR(mixedText, keys16, 'encrypt');
 	
 
 	// Hash again mixedText with IP^-1 table
@@ -299,7 +424,7 @@ DES.prototype.Decrypt = function (ciphertext64BitsStr, key64BitsStr) {
 
 
 	// Split mixed text for 2 String: L,R
-	mixedText = this.splitLRDecrypt(mixedText, keys16);
+	mixedText = this.splitLR(mixedText, keys16, 'decrypt');
 
 
 	// Hash again mixedText with IP^-1 table
@@ -311,7 +436,6 @@ DES.prototype.Decrypt = function (ciphertext64BitsStr, key64BitsStr) {
 
 DES.prototype.IpHash = function (plainText64Bits){//Works good!
 	//console.log(plainText64Bits);
-	//debugger;
 	// hash IP
 	var genOutput = '';
 	for (var i=0; i<64; i++){
@@ -356,7 +480,6 @@ DES.prototype.Key16From1Key = function (key64Bits) {//mixed text of 64 bit
 	console.log('(start)PC1:D '+PC1.D);
 	console.log('(start)PC2: '+PC2);
 	
-	debugger;
 	// Create k+ from k
 	// var key64BitsPlus = '';
 	// for (var i=0; i<56; i++){
@@ -364,7 +487,7 @@ DES.prototype.Key16From1Key = function (key64Bits) {//mixed text of 64 bit
 	// }
 
 	var keys16 = [];
-	for (var i=0; i<16; i++){
+	for (var i=0; i<this.rounds; i++){
 		// Do SHIFT LEFT
 		if (i in [0,1,8,15]){	//because i start from 0, we will check [0,1,8,15] and not [1,2,9,16]
 			/* Do 1 shift - for C,D */
@@ -411,27 +534,41 @@ DES.prototype.Key16From1Key = function (key64Bits) {//mixed text of 64 bit
 	console.log('(end)PC2: '+PC2);
 	return keys16;
 }
-DES.prototype.splitLREncrypt = function (mixedTextAsBitsArray, keys16) {//mixed text of 64 bit
+
+
+DES.prototype.splitLR = function (mixedTextAsBitsArray, keys16, op) {//mixed text of 64 bit
 	console.log('mixedText = '+mixedTextAsBitsArray);
-	debugger;
-	// Split mixedText to L,R every one 32bit
-	var L = mixedTextAsBitsArray.slice(0,32);//checked
-	var R = mixedTextAsBitsArray.slice(32,32+64);// checked
-	console.log('L+R: '+ L+'\n'+R);
+
+	var L,R;
+	if (op=='encrypt'){
+		// Split mixedText to L,R every one 32bit
+		L = mixedTextAsBitsArray.slice(0,32);
+		R = mixedTextAsBitsArray.slice(32,32+64);
+		//console.log('L+R: '+ L+'\n'+R);
+	}else{
+		// Split mixedText to L,R every one 32bit
+		R = mixedTextAsBitsArray.slice(0,32);
+		L = mixedTextAsBitsArray.slice(32,32+64);
+		//console.log('L+R: '+ L+'\n'+R);
+	}
 
 	// Make 16 rounds
-	for (var i=0; i<16; i++){
+	for (var i=0; i<this.rounds; i++){
 		// Before changes
 		var L_before = L;
 		var R_before = R;
 
 		// After changes
 		L = R_before;			//Li = R i-1
-		R = this.calcL_XOR_F(L_before, R_before, keys16[i]);	//calc Ri = Li-1 XOR f(Ri-1 , Ki)
+		if (op=='encrypt')	R = this.calcL_XOR_F(L_before, R_before, keys16[i]);	//calc Ri = Li-1 XOR f(Ri-1 , Ki)
+		else 				R = this.calcL_XOR_F(L_before, R_before, keys16[this.rounds-i]);	//calc Ri = Li-1 XOR f(Ri-1 , Ki)
 	}
 
-	var R16L16 = R.concat(L);
-	return R16L16;
+	var output;
+	if (op=='encrypt')	output = R.concat(L); //R16L16
+	else 				output = L.concat(R); //L16R16
+	
+	return output;
 }
 /*	
  *	L_before(32bit), 
@@ -452,6 +589,7 @@ DES.prototype.calcL_XOR_F = function(L_before, R_before, key){
 	
 DES.prototype.fCalc = function(R_before32, key){
 	// NEED Q.A
+	debugger;
 	var R_padding48 = this.f_paddingInputByExpandTable(R_before32);	// padding R(32bit) to 48bit
 	var xorArrRes = this.f_xorBetweenRAndKey(R_padding48, key);
 	var chunks8of6bits = this.f_split48to8chunks(xorArrRes);
@@ -467,7 +605,6 @@ DES.prototype.f_paddingInputByExpandTable = function(R_before32){
 	//console.log(R_before32);
 	// padding R to 48
 	//var R_padding48 = [];
-	//debugger;
 	var R_padding48 = '';
 	for (var i=0; i<48; i++){
 		R_padding48 += String(R_before32[ this.E[i] ]);
@@ -479,6 +616,7 @@ DES.prototype.f_paddingInputByExpandTable = function(R_before32){
  *		output 48bit array
  */
 DES.prototype.f_xorBetweenRAndKey = function(R_padding48, key){
+	debugger;
 	var xorArrRes = '';
 	for (var i=0; i<48; i++){
 		var temp = parseInt(R_padding48[i]) ^ parseInt(key[i]);
@@ -516,7 +654,6 @@ DES.prototype.f_s_boxes = function(chunks8of6bits){
 		var mid4 = chunks8of6bits[i][4];
 		var middleBitsStr = mid1+''+mid2+''+mid3+''+mid4;
 		var column = parseInt(middleBitsStr,2);
-		debugger;
 		// Get (4bits) from S-Box[i]
 		var s_box_res = this.S_box[i][line][column];
 		var s_box_res_4bits = dec2bin(s_box_res);
@@ -539,27 +676,7 @@ DES.prototype.f_PHash = function(joinChunks32){
 }
 
 
-DES.prototype.splitLRDecrypt = function (mixedTextAsBitsArray, keys16) {//mixed text of 64 bit
-	console.log('mixedText = '+mixedTextAsBitsArray);
-	// Split mixedText to L,R every one 32bit
-	var R = mixedTextAsBitsArray.slice(0,32);
-	var L = mixedTextAsBitsArray.slice(32,32+64);
-	//console.log(L+'\n'+R);
 
-	// Make 16 rounds (start from 16)
-	for (var i=0; i<16; i++){
-		// Before changes
-		var L_before = L;
-		var R_before = R;
-
-		// After changes
-		L = R_before;			//Li = R i-1
-		R = this.calcL_XOR_F(L_before, R_before, keys16[15-i]);	//calc Ri = Li-1 XOR f(Ri-1 , Ki)
-	}
-
-	var L16R16 = L.concat(R);
-	return L16R16;
-}
 	/*	
 	 *	L_before(32bit), 
 	 *	R_before(32bit), 
@@ -689,7 +806,6 @@ function GenerateBit(){
 //   return String.fromCharCode.apply(String, key);
 // }
 function BitsArrayFromString(str){
-	debugger;
 	//var nullChar = 0;// =0x0D;
 	//var LINE_FEED = 10; //= 0x0A;
 

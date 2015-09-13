@@ -40,7 +40,7 @@ $('#encryptionType').change(function() {
                       <input class="keyBt" type="button" id="3desBtn3" value="Generate key">');
       var opType = $('<lable class="encryptionLable">Oparation Type:</lable> <select id="opType" class="encryptionElement"> \
                       <option value="CBC">CBC</option> \
-                      <option value="CFB">CFB</option> \
+                      <option value="OFB">CFB</option> \
                       <option value="CTR">CTR</option> \
                     </select>');
       encryptionElements.append(key1);
